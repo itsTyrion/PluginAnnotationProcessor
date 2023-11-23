@@ -1,3 +1,4 @@
+[![](https://jitpack.io/v/de.itsTyrion/PluginAnnotationProcessor.svg)](https://jitpack.io/#de.itsTyrion/PluginAnnotationProcessor)
 # Plugin Annotation Processor
 
 
@@ -57,6 +58,13 @@ public class MyBungeePlugin extends Plugin {
 ```
 
 ## Gradle
+#### Add the Jitpack repo if you haven't already:
+```groovy
+repositories {
+    // Add your other repositories here
+    maven { url 'https://jitpack.io' }
+}
+```
 #### For Java sources:
 ```groovy
 dependencies {
@@ -92,6 +100,13 @@ kapt {
 ```
 
 ## Maven
+#### Add the Jitpack repo if you haven't already:
+```xml
+    <repository>
+        <id>jitpack.io</id>
+        <url>https://jitpack.io</url>
+    </repository>
+```
 #### For Java sources:
 ```xml
 <dependency>
