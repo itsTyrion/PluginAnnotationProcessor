@@ -56,7 +56,8 @@ public class MyBungeePlugin extends Plugin {
     // Your plugin code here
 }
 ```
-
+### Custom version/version format (all platforms):
+Set the `version` parameter to either something completely different (why?) or e.g. `"aPrefix-%mcPluginVersion%-aSuffix"` 
 ## Gradle
 #### Add the Jitpack repo if you haven't already:
 ```groovy
@@ -69,14 +70,22 @@ repositories {
 ```groovy
 dependencies {
     // Add your other dependencies here
-    compileOnly 'de.itsTyrion:PluginAnnotationProcessor:1.0'
-    annotationProcessor 'de.itsTyrion:PluginAnnotationProcessor:1.0'
+    compileOnly 'de.itsTyrion:PluginAnnotationProcessor:1.1'
+    annotationProcessor 'de.itsTyrion:PluginAnnotationProcessor:1.1'
 }
 
 tasks.withType(JavaCompile).configureEach {
-    // Add your other options here
-    options.compilerArgs += ('-Aproject.version=' + project.version)
+    // Add other annotation processor arguments as/if needed or use different values, this is just what I use.
+    def versionString = version.contains("SNAPSHOT") ? (version + new Date().format('yyyyMMdd_HHmm')) : version
+    options.compilerArgs += ('-Aproject.version=' + versionString)
 }
+// If you want to use the Spigot Library Loader (`libraries` section), add this and change `compileOnly` to `spigotLib`. 
+// Keep in mind it can only load from Maven Central!
+configurations {
+    spigotLib
+    compileOnly { extendsFrom spigotLib }
+}
+options.compilerArgs += '-AspigotLibraries=' + configurations.spigotLib.dependencies.collect { "$it.group:$it.name:$it.version" }
 ```
 #### For Kotlin sources:
 ```groovy
@@ -87,19 +96,19 @@ plugins {
 
 dependencies {
     // Add your other dependencies here
-    compileOnly 'de.itsTyrion:PluginAnnotationProcessor:1.0'
-    kapt 'de.itsTyrion:PluginAnnotationProcessor:1.0'
+    compileOnly 'de.itsTyrion:PluginAnnotationProcessor:1.1'
+    kapt 'de.itsTyrion:PluginAnnotationProcessor:1.1'
 }
 
-kapt {
-    arguments {
-        // Add other annotation processor arguments if needed
-        arg('project.version', project.version)
-    }
+kapt.arguments {
+    // Add other annotation processor arguments as/if needed or use different values, this is just what I use.
+    arg 'mcPluginVersion', version.contains("SNAPSHOT") ? (version + new Date().format('yyyyMMdd_HHmm')) : version
+    arg 'spigotLibraries', configurations.spigotLib.dependencies.collect { "$it.group:$it.name:$it.version" }.join(';')
 }
 ```
 
 ## Maven
+Hint: I have no idea how to do the `libraries` part with maven, tips or a PR are welcome.
 #### Add the Jitpack repo if you haven't already:
 ```xml
     <repository>
@@ -112,7 +121,7 @@ kapt {
 <dependency>
     <groupId>de.itsTyrion</groupId>
     <artifactId>PluginAnnotationProcessor</artifactId>
-    <version>1.0</version>
+    <version>1.1</version>
 </dependency>
 ```
 ```xml
@@ -153,7 +162,7 @@ if you enable extensions for the plugin -->
             <annotationProcessorPath>
                 <groupId>de.itsTyrion</groupId>
                 <artifactId>PluginAnnotationProcessor</artifactId>
-                <version>1.0</version>
+                <version>1.1</version>
             </annotationProcessorPath>
         </annotationProcessorPaths>
     </configuration>

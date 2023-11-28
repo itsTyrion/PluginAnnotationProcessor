@@ -12,17 +12,18 @@ import java.io.PrintWriter;
 import java.util.Arrays;
 import java.util.Set;
 
-@SupportedOptions(value = "project.version")
-@SupportedAnnotationTypes({"de.itsTyrion.pluginAnnotation.Plugin", "de.itsTyrion.pluginAnnotation.BungeePlugin"})
+@SuppressWarnings("Since15") // This is only about the SupportedSourceVersion annotation
 @SupportedSourceVersion(SourceVersion.RELEASE_17)
+@SupportedOptions(value = {"mcPluginVersion", "spigotLibraries"})
+@SupportedAnnotationTypes({"de.itsTyrion.pluginAnnotation.Plugin", "de.itsTyrion.pluginAnnotation.BungeePlugin"})
 public class PluginAnnotationProcessor extends AbstractProcessor {
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
         // Retrieve the project version from the processor options, required for plugin.yml `version` property
-        val projectVersion = processingEnv.getOptions().get("project.version");
+        val projectVersion = processingEnv.getOptions().get("mcPluginVersion");
         if (projectVersion == null) {
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "project.version unset!");
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "`mcPluginVersion` unset!");
             return false;
         }
 
@@ -33,8 +34,12 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
                 // fully qualified name, required for plugin.yml `main` property
                 val fullyQualifiedName = ((TypeElement) element).getQualifiedName().toString();
 
-                val pluginYmlContent = generatePluginYmlContent(pluginAnnotation, fullyQualifiedName, projectVersion);
-                writeYml("plugin.yml", pluginYmlContent, fullyQualifiedName);
+                // `libraries` section of plugin.yml, used by Spigot-based servers to DL dependencies as needed
+                val librariesString = processingEnv.getOptions().get("spigotLibraries");
+                val libraries = librariesString != null ? librariesString.split(";") : new String[0];
+
+                val content = generatePluginYmlContent(pluginAnnotation, fullyQualifiedName, projectVersion, libraries);
+                writeYml("plugin.yml", content, fullyQualifiedName);
             }
         }
         for (val element : roundEnv.getElementsAnnotatedWith(BungeePlugin.class)) {
@@ -44,8 +49,8 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
                 // fully qualified name, required for bungee.yml `main` property
                 val fullyQualifiedName = ((TypeElement) element).getQualifiedName().toString();
 
-                val pluginYmlContent = generateBungeeYmlContent(pluginAnnotation, fullyQualifiedName, projectVersion);
-                writeYml("bungee.yml", pluginYmlContent, fullyQualifiedName);
+                val content = generateBungeeYmlContent(pluginAnnotation, fullyQualifiedName, projectVersion);
+                writeYml("bungee.yml", content, fullyQualifiedName);
             }
         }
 
@@ -65,10 +70,10 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
         }
     }
 
-    private String generatePluginYmlContent(Plugin plugin, String fqName, String version) {
+    private String generatePluginYmlContent(Plugin plugin, String fqName, String version, String[] libraries) {
         val builder = new StringBuilder()
             .append("name: ").append(plugin.name()).append('\n')
-            .append("version: ").append(plugin.version().replace("{project.version}", version)).append('\n')
+            .append("version: ").append(plugin.version().replace("%mcPluginVersion%", version)).append('\n')
             .append("main: ").append(fqName).append('\n')
             .append("api-version: ").append(plugin.apiVersion()).append('\n')
             .append("load: ").append(plugin.load().name()).append('\n');
@@ -79,6 +84,7 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
         appendIfPresent(builder, "loadbefore", plugin.loadBefore());
         appendIfPresent(builder, "provides", plugin.provides());
         appendIfPresent(builder, "softdepend", plugin.softDepend());
+        appendIfPresent(builder, "libraries", libraries);
 
         appendIfPresent(builder, "website", plugin.website());
         appendIfPresent(builder, "description", plugin.description());
@@ -90,7 +96,7 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
     private String generateBungeeYmlContent(BungeePlugin plugin, String fqName, String version) {
         val builder = new StringBuilder()
             .append("name: ").append(plugin.name()).append('\n')
-            .append("version: ").append(plugin.version().replace("{project.version}", version)).append('\n')
+            .append("version: ").append(plugin.version().replace("%mcPluginVersion%", version)).append('\n')
             .append("main: ").append(fqName).append('\n');
 
         appendIfPresent(builder, "depends", plugin.depends());
