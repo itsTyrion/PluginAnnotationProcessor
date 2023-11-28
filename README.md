@@ -85,7 +85,7 @@ configurations {
     spigotLib
     compileOnly { extendsFrom spigotLib }
 }
-options.compilerArgs += '-AspigotLibraries=' + configurations.spigotLib.dependencies.collect { "$it.group:$it.name:$it.version" }
+options.compilerArgs += '-AspigotLibraries=' + configurations.spigotLib.dependencies.collect { "$it.group:$it.name:$it.version" }.join(' ')
 ```
 #### For Kotlin sources:
 ```groovy
