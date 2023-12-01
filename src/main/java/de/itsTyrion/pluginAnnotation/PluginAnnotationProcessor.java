@@ -23,7 +23,7 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
         // Retrieve the project version from the processor options, required for plugin.yml `version` property
         val projectVersion = processingEnv.getOptions().get("mcPluginVersion");
         if (projectVersion == null) {
-            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "`mcPluginVersion` unset!");
+            processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR, "`mcPluginVersion` unset, check the docs.");
             return false;
         }
 
