@@ -1,7 +1,6 @@
 [![](https://jitpack.io/v/de.itsTyrion/PluginAnnotationProcessor.svg)](https://jitpack.io/#de.itsTyrion/PluginAnnotationProcessor)
 # Plugin Annotation Processor
 
-
 A Bukkit/Spigot or BungeeCord plugin that simplifies the generation of `plugin.yml` file using annotations.
 
 ## Overview
@@ -66,6 +65,21 @@ repositories {
     maven { url 'https://jitpack.io' }
 }
 ```
+---
+If you want to use the Spigot Library Loader (plugin.yml `libraries` section), create a new dependency config like so:  
+(The name is up to you, I used `spigotLib` here)  
+**Keep in mind it can only load from Maven Central!**
+```groovy
+configurations {
+    spigotLib
+    compileOnly { extendsFrom spigotLib }
+}
+// Change the dependency scope from `implementation`/`compileOnly` to the config name of your choice. Example:
+spigotLib 'com.google.inject:guice:7.0.0' // example dependency
+```
+Then, pass the list to the compiler/annotation processor according to the sections below.
+
+---
 #### For Java sources:
 ```groovy
 dependencies {
@@ -76,17 +90,15 @@ dependencies {
 
 tasks.withType(JavaCompile).configureEach {
     // Add other annotation processor arguments as/if needed or use different values, this is just what I use.
-    def versionString = version.contains("SNAPSHOT") ? (version + new Date().format('yyyyMMdd_HHmm')) : version
-    options.compilerArgs += ('-Aproject.version=' + versionString)
+    options.compilerArgs +=
+            "-AmcPluginVersion=${"$version".contains("SNAPSHOT") ? (version + new Date().format('yyyyMMdd_HHmm')) : version}"
+    // This is only needed if you use the Spigot Library Loader. If you use a different name, replace `spigotLib` with it.
+    options.compilerArgs +=
+            "-AspigotLibraries=${configurations.spigotLib.dependencies.collect { "$it.group:$it.name:$it.version" }.join(' ')}"
 }
-// If you want to use the Spigot Library Loader (`libraries` section), add this and change `compileOnly` to `spigotLib`. 
-// Keep in mind it can only load from Maven Central!
-configurations {
-    spigotLib
-    compileOnly { extendsFrom spigotLib }
-}
-options.compilerArgs += '-AspigotLibraries=' + configurations.spigotLib.dependencies.collect { "$it.group:$it.name:$it.version" }.join(' ')
 ```
+
+
 #### For Kotlin sources:
 ```groovy
 plugins {
@@ -103,6 +115,7 @@ dependencies {
 kapt.arguments {
     // Add other annotation processor arguments as/if needed or use different values, this is just what I use.
     arg 'mcPluginVersion', version.contains("SNAPSHOT") ? (version + new Date().format('yyyyMMdd_HHmm')) : version
+    // This is only needed if you use the Spigot Library Loader. If you use a different name, replace `spigotLib` with it.
     arg 'spigotLibraries', configurations.spigotLib.dependencies.collect { "$it.group:$it.name:$it.version" }.join(';')
 }
 ```
