@@ -1,5 +1,9 @@
 package de.itsTyrion.pluginAnnotation;
 
+import java.lang.annotation.ElementType;
+import java.lang.annotation.Target;
+
+@Target(ElementType.TYPE)
 public @interface Plugin {
     String name();
     String[] depend() default {};

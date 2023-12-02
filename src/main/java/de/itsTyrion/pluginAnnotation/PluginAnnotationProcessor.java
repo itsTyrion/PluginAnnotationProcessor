@@ -28,30 +28,26 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
         }
 
         for (val element : roundEnv.getElementsAnnotatedWith(Plugin.class)) {
-            if (element instanceof TypeElement) {
-                val pluginAnnotation = element.getAnnotation(Plugin.class);
+            val pluginAnnotation = element.getAnnotation(Plugin.class);
 
-                // fully qualified name, required for plugin.yml `main` property
-                val fullyQualifiedName = ((TypeElement) element).getQualifiedName().toString();
+            // fully qualified name, required for plugin.yml `main` property
+            val fullyQualifiedName = ((TypeElement) element).getQualifiedName().toString();
 
-                // `libraries` section of plugin.yml, used by Spigot-based servers to DL dependencies as needed
-                val librariesString = processingEnv.getOptions().get("spigotLibraries");
-                val libraries = librariesString != null ? librariesString.split(";") : new String[0];
+            // `libraries` section of plugin.yml, used by Spigot-based servers to DL dependencies as needed
+            val librariesString = processingEnv.getOptions().get("spigotLibraries");
+            val libraries = librariesString != null ? librariesString.split(";") : new String[0];
 
-                val content = generatePluginYmlContent(pluginAnnotation, fullyQualifiedName, projectVersion, libraries);
-                writeYml("plugin.yml", content, fullyQualifiedName);
-            }
+            val content = generatePluginYmlContent(pluginAnnotation, fullyQualifiedName, projectVersion, libraries);
+            writeYml("plugin.yml", content, fullyQualifiedName);
         }
         for (val element : roundEnv.getElementsAnnotatedWith(BungeePlugin.class)) {
-            if (element instanceof TypeElement) {
-                val pluginAnnotation = element.getAnnotation(BungeePlugin.class);
+            val pluginAnnotation = element.getAnnotation(BungeePlugin.class);
 
-                // fully qualified name, required for bungee.yml `main` property
-                val fullyQualifiedName = ((TypeElement) element).getQualifiedName().toString();
+            // fully qualified name, required for bungee.yml `main` property
+            val fullyQualifiedName = ((TypeElement) element).getQualifiedName().toString();
 
-                val content = generateBungeeYmlContent(pluginAnnotation, fullyQualifiedName, projectVersion);
-                writeYml("bungee.yml", content, fullyQualifiedName);
-            }
+            val content = generateBungeeYmlContent(pluginAnnotation, fullyQualifiedName, projectVersion);
+            writeYml("bungee.yml", content, fullyQualifiedName);
         }
 
         return true;
