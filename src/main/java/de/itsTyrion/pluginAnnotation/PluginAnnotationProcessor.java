@@ -37,7 +37,7 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
             // fully qualified name, required for plugin.yml `main` property
             val fqName = ((TypeElement) element).getQualifiedName().toString();
 
-            if (fqName.equals(pluginMainClassFound)) {
+            if (pluginMainClassFound != null && !pluginMainClassFound.equals(fqName)) {
                 processingEnv.getMessager()
                     .printMessage(Kind.ERROR, "Multiple plugin main classes are unsupported! Using `" + fqName + "`.");
             }
@@ -60,7 +60,7 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
             // fully qualified name, required for bungee.yml `main` property
             val fqName = ((TypeElement) element).getQualifiedName().toString();
 
-            if (!fqName.equals(bungeePluginMainClassFound)) {
+            if (bungeePluginMainClassFound != null && !bungeePluginMainClassFound.equals(fqName)) {
                 processingEnv.getMessager()
                     .printMessage(Kind.ERROR, "Multiple plugin main classes are unsupported! Using `" + fqName + "`.");
                 return false;
