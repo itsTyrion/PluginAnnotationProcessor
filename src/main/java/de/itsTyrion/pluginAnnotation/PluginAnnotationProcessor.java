@@ -1,26 +1,35 @@
 package de.itsTyrion.pluginAnnotation;
 
+import de.itsTyrion.pluginAnnotation.util.Generator;
+import de.itsTyrion.pluginAnnotation.velocity.VelocityPlugin;
 import lombok.val;
 
-import javax.annotation.processing.*;
+import javax.annotation.processing.AbstractProcessor;
+import javax.annotation.processing.RoundEnvironment;
+import javax.annotation.processing.SupportedAnnotationTypes;
+import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
+import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.StandardLocation;
 import java.io.IOException;
 import java.io.PrintWriter;
-import java.util.Arrays;
 import java.util.Set;
-import java.util.function.BiConsumer;
 
-@SuppressWarnings("Since15") // This is only about the SupportedSourceVersion annotation
-@SupportedSourceVersion(SourceVersion.RELEASE_17)
 @SupportedOptions(value = {"mcPluginVersion", "spigotLibraries"})
-@SupportedAnnotationTypes({"de.itsTyrion.pluginAnnotation.Plugin", "de.itsTyrion.pluginAnnotation.BungeePlugin"})
+@SupportedAnnotationTypes({
+    "de.itsTyrion.pluginAnnotation.Plugin",
+    "de.itsTyrion.pluginAnnotation.BungeePlugin",
+    "de.itsTyrion.pluginAnnotation.velocity.VelocityPlugin"})
 public class PluginAnnotationProcessor extends AbstractProcessor {
 
     private String pluginMainClassFound = null;
     private String bungeePluginMainClassFound = null;
+    private String velocityPluginMainClassFound = null;
+
+    @Override
+    public SourceVersion getSupportedSourceVersion() {return SourceVersion.latestSupported();}
 
     @Override
     public boolean process(Set<? extends TypeElement> annotations, RoundEnvironment roundEnv) {
@@ -32,8 +41,6 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
         }
 
         for (val element : roundEnv.getElementsAnnotatedWith(Plugin.class)) {
-            val pluginAnnotation = element.getAnnotation(Plugin.class);
-
             // fully qualified name, required for plugin.yml `main` property
             val fqName = ((TypeElement) element).getQualifiedName().toString();
 
@@ -51,12 +58,12 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
             val commandInfos = roundEnv.getElementsAnnotatedWith(CommandInfo.class).stream()
                 .map(element1 -> element1.getAnnotation(CommandInfo.class)).toArray(CommandInfo[]::new);
 
-            val content = generatePluginYmlContent(pluginAnnotation, fqName, projectVersion, libraries, commandInfos);
-            writeYml("plugin.yml", content, fqName);
+            val pluginAnnotation = element.getAnnotation(Plugin.class);
+            val content = Generator.pluginYML(pluginAnnotation, fqName, projectVersion, libraries, commandInfos);
+            writeResource("plugin.yml", content, fqName);
         }
-        for (val element : roundEnv.getElementsAnnotatedWith(BungeePlugin.class)) {
-            val pluginAnnotation = element.getAnnotation(BungeePlugin.class);
 
+        for (val element : roundEnv.getElementsAnnotatedWith(BungeePlugin.class)) {
             // fully qualified name, required for bungee.yml `main` property
             val fqName = ((TypeElement) element).getQualifiedName().toString();
 
@@ -67,14 +74,37 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
             }
             bungeePluginMainClassFound = fqName;
 
-            val content = generateBungeeYmlContent(pluginAnnotation, fqName, projectVersion);
-            writeYml("bungee.yml", content, fqName);
+            val pluginAnnotation = element.getAnnotation(BungeePlugin.class);
+            val content = Generator.bungeeYML(pluginAnnotation, fqName, projectVersion);
+            writeResource("bungee.yml", content, fqName);
+        }
+
+        for (val element : roundEnv.getElementsAnnotatedWith(VelocityPlugin.class)) {
+            // fully qualified name, required for velocity-plugin.json `main` property
+            val fqName = ((TypeElement) element).getQualifiedName().toString();
+
+            if (velocityPluginMainClassFound != null && !velocityPluginMainClassFound.equals(fqName)) {
+                processingEnv.getMessager()
+                    .printMessage(Kind.ERROR, "Multiple plugin main classes are unsupported! Using `" + fqName + "`.");
+                return false;
+            }
+            velocityPluginMainClassFound = fqName;
+
+            val plugin = element.getAnnotation(VelocityPlugin.class);
+            if (!Generator.VELOCITY_ID_PATTERN.matcher(plugin.id()).matches()) {
+                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                    "Invalid ID for plugin " + fqName + ". IDs must start alphabetically," +
+                    "have lowercase alphanumeric characters, and can contain dashes or underscores.");
+                return false;
+            }
+            val content = Generator.velocityPluginJSON(plugin, fqName, projectVersion);
+            writeResource("velocity-plugin.json", content, fqName);
         }
 
         return true;
     }
 
-    private void writeYml(String name, String content, String fqName) {
+    private void writeResource(String name, String content, String fqName) {
         processingEnv.getMessager()
             .printMessage(Kind.NOTE, "Processed plugin annotation on `" + fqName + '`');
 
@@ -86,75 +116,4 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
             processingEnv.getMessager().printMessage(Kind.ERROR, "Error while writing " + name + ':' + e);
         }
     }
-
-    private String generatePluginYmlContent(Plugin plugin, String fqName, String version, String[] libraries,
-                                            CommandInfo[] commands) {
-        val builder = new StringBuilder()
-            .append("name: ").append(plugin.name()).append('\n')
-            .append("version: ").append(plugin.version().replace("%mcPluginVersion%", version)).append('\n')
-            .append("main: ").append(fqName).append('\n')
-            .append("api-version: ").append(plugin.apiVersion()).append('\n')
-            .append("load: ").append(plugin.load().name()).append('\n');
-
-        appendIfPresent(builder, "depend", plugin.depend());
-        appendIfPresent(builder, "authors", plugin.authors());
-        appendIfPresent(builder, "contributors", plugin.contributors());
-        appendIfPresent(builder, "loadbefore", plugin.loadBefore());
-        appendIfPresent(builder, "provides", plugin.provides());
-        appendIfPresent(builder, "softdepend", plugin.softDepend());
-        appendIfPresent(builder, "libraries", libraries);
-
-        appendIfPresent(builder, "website", plugin.website());
-        if (notBlank(plugin.description()))
-            appendIfPresent(builder, "description", '"' + plugin.description().replace("\n", "\\n") + '"');
-        appendIfPresent(builder, "prefix", plugin.logPrefix());
-
-        builder.append('\n');
-
-        if (commands.length != 0) {
-            val sb = new StringBuilder("commands:\n");
-            for (CommandInfo ci : commands) {
-                sb.append("  ").append(ci.name()).append(": ").append('\n');
-                sb.append("    aliases: ").append(Arrays.toString(ci.aliases())).append('\n');
-
-                BiConsumer<String, String> append = (k, v) -> {if (notBlank(v)) sb.append(k).append(v).append('\n');};
-
-                append.accept("    description: ", ci.description());
-                append.accept("    usage: ", ci.usage());
-                append.accept("    permission: ", ci.permission());
-                append.accept("    permission-message: ", ci.permissionMessage());
-            }
-            builder.append(sb);
-        }
-
-        return builder.toString();
-    }
-
-
-    private String generateBungeeYmlContent(BungeePlugin plugin, String fqName, String version) {
-        val builder = new StringBuilder()
-            .append("name: ").append(plugin.name()).append('\n')
-            .append("version: ").append(plugin.version().replace("%mcPluginVersion%", version)).append('\n')
-            .append("main: ").append(fqName).append('\n');
-
-        appendIfPresent(builder, "depends", plugin.depends());
-        appendIfPresent(builder, "softdepends", plugin.softDepends());
-
-        appendIfPresent(builder, "author", plugin.author());
-        appendIfPresent(builder, "description", plugin.description());
-
-        return builder.toString();
-    }
-
-    private void appendIfPresent(StringBuilder builder, String key, String[] value) {
-        if (value.length > 0) // The format of Arrays.toString is a valid YAML list - how convenient.
-            builder.append(key).append(": ").append(Arrays.toString(value)).append('\n');
-    }
-
-    private void appendIfPresent(StringBuilder builder, String key, String value) {
-        if (notBlank(value))
-            builder.append(key).append(": ").append(value).append('\n');
-    }
-
-    private boolean notBlank(String str) {return !str.isEmpty() && !str.chars().allMatch(Character::isWhitespace);}
 }
