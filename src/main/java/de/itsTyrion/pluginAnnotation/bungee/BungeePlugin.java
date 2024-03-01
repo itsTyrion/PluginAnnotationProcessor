@@ -1,4 +1,4 @@
-package de.itsTyrion.pluginAnnotation;
+package de.itsTyrion.pluginAnnotation.bungee;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
@@ -10,5 +10,4 @@ public @interface BungeePlugin {
     String description() default "";
     String author() default "";
     String[] softDepends() default {};
-    String version() default "%mcPluginVersion%";
 }

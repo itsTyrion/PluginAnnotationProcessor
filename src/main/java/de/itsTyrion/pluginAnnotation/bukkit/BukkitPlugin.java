@@ -1,10 +1,10 @@
-package de.itsTyrion.pluginAnnotation;
+package de.itsTyrion.pluginAnnotation.bukkit;
 
 import java.lang.annotation.ElementType;
 import java.lang.annotation.Target;
 
 @Target(ElementType.TYPE)
-public @interface Plugin {
+public @interface BukkitPlugin {
     String name();
     String[] depend() default {};
     String description() default "";
@@ -16,7 +16,6 @@ public @interface Plugin {
     String[] loadBefore() default {};
     String logPrefix() default "";
     String[] provides() default {};
-    String version() default "%mcPluginVersion%";
     LoadAt load() default LoadAt.POSTWORLD;
 
     @SuppressWarnings("unused")

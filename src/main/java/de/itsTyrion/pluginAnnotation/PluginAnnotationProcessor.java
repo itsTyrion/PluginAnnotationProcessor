@@ -1,5 +1,8 @@
 package de.itsTyrion.pluginAnnotation;
 
+import de.itsTyrion.pluginAnnotation.bukkit.BukkitPlugin;
+import de.itsTyrion.pluginAnnotation.bukkit.CommandInfo;
+import de.itsTyrion.pluginAnnotation.bungee.BungeePlugin;
 import de.itsTyrion.pluginAnnotation.util.Generator;
 import de.itsTyrion.pluginAnnotation.velocity.VelocityPlugin;
 import lombok.val;
@@ -10,7 +13,6 @@ import javax.annotation.processing.SupportedAnnotationTypes;
 import javax.annotation.processing.SupportedOptions;
 import javax.lang.model.SourceVersion;
 import javax.lang.model.element.TypeElement;
-import javax.tools.Diagnostic;
 import javax.tools.Diagnostic.Kind;
 import javax.tools.StandardLocation;
 import java.io.IOException;
@@ -19,9 +21,10 @@ import java.util.Set;
 
 @SupportedOptions(value = {"mcPluginVersion", "spigotLibraries"})
 @SupportedAnnotationTypes({
-    "de.itsTyrion.pluginAnnotation.Plugin",
-    "de.itsTyrion.pluginAnnotation.BungeePlugin",
-    "de.itsTyrion.pluginAnnotation.velocity.VelocityPlugin"})
+    "de.itsTyrion.pluginAnnotation.bukkit.BukkitPlugin",
+    "de.itsTyrion.pluginAnnotation.bungee.BungeePlugin",
+    "de.itsTyrion.pluginAnnotation.velocity.VelocityPlugin"
+})
 public class PluginAnnotationProcessor extends AbstractProcessor {
 
     private String pluginMainClassFound = null;
@@ -40,7 +43,7 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
             return false;
         }
 
-        for (val element : roundEnv.getElementsAnnotatedWith(Plugin.class)) {
+        for (val element : roundEnv.getElementsAnnotatedWith(BukkitPlugin.class)) {
             // fully qualified name, required for plugin.yml `main` property
             val fqName = ((TypeElement) element).getQualifiedName().toString();
 
@@ -58,7 +61,7 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
             val commandInfos = roundEnv.getElementsAnnotatedWith(CommandInfo.class).stream()
                 .map(element1 -> element1.getAnnotation(CommandInfo.class)).toArray(CommandInfo[]::new);
 
-            val pluginAnnotation = element.getAnnotation(Plugin.class);
+            val pluginAnnotation = element.getAnnotation(BukkitPlugin.class);
             val content = Generator.pluginYML(pluginAnnotation, fqName, projectVersion, libraries, commandInfos);
             writeResource("plugin.yml", content, fqName);
         }
@@ -92,7 +95,7 @@ public class PluginAnnotationProcessor extends AbstractProcessor {
 
             val plugin = element.getAnnotation(VelocityPlugin.class);
             if (!Generator.VELOCITY_ID_PATTERN.matcher(plugin.id()).matches()) {
-                processingEnv.getMessager().printMessage(Diagnostic.Kind.ERROR,
+                processingEnv.getMessager().printMessage(Kind.ERROR,
                     "Invalid ID for plugin " + fqName + ". IDs must start alphabetically," +
                     "have lowercase alphanumeric characters, and can contain dashes or underscores.");
                 return false;

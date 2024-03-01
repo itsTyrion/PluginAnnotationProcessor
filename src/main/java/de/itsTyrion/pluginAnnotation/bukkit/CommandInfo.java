@@ -1,4 +1,4 @@
-package de.itsTyrion.pluginAnnotation;
+package de.itsTyrion.pluginAnnotation.bukkit;
 
 public @interface CommandInfo {
     String name();

@@ -1,9 +1,9 @@
 package de.itsTyrion.pluginAnnotation.util;
 
 import com.grack.nanojson.JsonWriter;
-import de.itsTyrion.pluginAnnotation.BungeePlugin;
-import de.itsTyrion.pluginAnnotation.CommandInfo;
-import de.itsTyrion.pluginAnnotation.Plugin;
+import de.itsTyrion.pluginAnnotation.bungee.BungeePlugin;
+import de.itsTyrion.pluginAnnotation.bukkit.CommandInfo;
+import de.itsTyrion.pluginAnnotation.bukkit.BukkitPlugin;
 import de.itsTyrion.pluginAnnotation.velocity.VelocityPlugin;
 import lombok.val;
 
@@ -16,11 +16,11 @@ public final class Generator {
     private Generator() {}
 
 
-    public static String pluginYML(Plugin plugin, String fqName, String version, String[] libraries,
+    public static String pluginYML(BukkitPlugin plugin, String fqName, String version, String[] libraries,
                                    CommandInfo[] commands) {
         val builder = new StringBuilder()
             .append("name: ").append(plugin.name()).append('\n')
-            .append("version: ").append(plugin.version().replace("%mcPluginVersion%", version)).append('\n')
+            .append("version: ").append(version).append('\n')
             .append("main: ").append(fqName).append('\n')
             .append("api-version: ").append(plugin.apiVersion()).append('\n')
             .append("load: ").append(plugin.load().name()).append('\n');
@@ -63,7 +63,7 @@ public final class Generator {
     public static String bungeeYML(BungeePlugin plugin, String fqName, String version) {
         val builder = new StringBuilder()
             .append("name: ").append(plugin.name()).append('\n')
-            .append("version: ").append(plugin.version().replace("%mcPluginVersion%", version)).append('\n')
+            .append("version: ").append(version).append('\n')
             .append("main: ").append(fqName).append('\n');
 
         appendIfPresent(builder, "depends", plugin.depends());

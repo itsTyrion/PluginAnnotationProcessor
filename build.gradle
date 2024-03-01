@@ -8,7 +8,7 @@ repositories {
 }
 
 group 'de.itsTyrion'
-version '1.3'
+version '1.4'
 
 dependencies {
     implementation 'jakarta.annotation:jakarta.annotation-api:2.1.1'
